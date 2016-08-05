@@ -71,7 +71,7 @@ public class SearchModuleTests extends ModuleTestCase {
             }
         };
         expectThrows(IllegalArgumentException.class,
-                () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, singletonList(registersDupeHighlighter)));
+                () -> new SearchModule(Settings.EMPTY, false, singletonList(registersDupeHighlighter)));
 
         SearchPlugin registersDupeSuggester = new SearchPlugin() {
             @Override
@@ -80,7 +80,7 @@ public class SearchModuleTests extends ModuleTestCase {
             }
         };
         expectThrows(IllegalArgumentException.class,
-                () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, singletonList(registersDupeSuggester)));
+                () -> new SearchModule(Settings.EMPTY, false, singletonList(registersDupeSuggester)));
 
         SearchPlugin registersDupeScoreFunction = new SearchPlugin() {
             @Override
@@ -90,24 +90,24 @@ public class SearchModuleTests extends ModuleTestCase {
             }
         };
         expectThrows(IllegalArgumentException.class,
-                () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, singletonList(registersDupeScoreFunction)));
+                () -> new SearchModule(Settings.EMPTY, false, singletonList(registersDupeScoreFunction)));
 
         SearchPlugin registersDupeSignificanceHeuristic = new SearchPlugin() {
             @Override
-            public List<SearchPluginSpec<SignificanceHeuristic, SignificanceHeuristicParser>> getSignificanceHeuristics() {
-                return singletonList(new SearchPluginSpec<>(ChiSquare.NAME, ChiSquare::new, ChiSquare.PARSER));
+            public List<SearchExtensionSpec<SignificanceHeuristic, SignificanceHeuristicParser>> getSignificanceHeuristics() {
+                return singletonList(new SearchExtensionSpec<>(ChiSquare.NAME, ChiSquare::new, ChiSquare.PARSER));
             }
         };
-        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false,
+        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, false,
                 singletonList(registersDupeSignificanceHeuristic)));
 
         SearchPlugin registersDupeMovAvgModel = new SearchPlugin() {
             @Override
-            public List<SearchPluginSpec<MovAvgModel, MovAvgModel.AbstractModelParser>> getMovingAverageModels() {
-                return singletonList(new SearchPluginSpec<>(SimpleModel.NAME, SimpleModel::new, SimpleModel.PARSER));
+            public List<SearchExtensionSpec<MovAvgModel, MovAvgModel.AbstractModelParser>> getMovingAverageModels() {
+                return singletonList(new SearchExtensionSpec<>(SimpleModel.NAME, SimpleModel::new, SimpleModel.PARSER));
             }
         };
-        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false,
+        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, false,
                 singletonList(registersDupeMovAvgModel)));
 
         SearchPlugin registersDupeFetchSubPhase = new SearchPlugin() {
@@ -116,17 +116,20 @@ public class SearchModuleTests extends ModuleTestCase {
                 return singletonList(new ExplainFetchSubPhase());
             }
         };
-        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false,
+        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, false,
                 singletonList(registersDupeFetchSubPhase)));
 
-        SearchModule module = new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, emptyList());
-        IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> module
-                .registerQuery(TermQueryBuilder::new, TermQueryBuilder::fromXContent, TermQueryBuilder.QUERY_NAME_FIELD));
-        assertThat(e.getMessage(), containsString("] already registered for [query][term] while trying to register [org.elasticsearch."));
+        SearchPlugin registersDupeFetchQuery = new SearchPlugin() {
+            public List<SearchPlugin.QuerySpec<?>> getQueries() {
+                return singletonList(new QuerySpec<>(TermQueryBuilder.NAME, TermQueryBuilder::new, TermQueryBuilder::fromXContent));
+            }
+        };
+        expectThrows(IllegalArgumentException.class, () -> new SearchModule(Settings.EMPTY, false,
+                singletonList(registersDupeFetchQuery)));
     }
 
     public void testRegisterSuggester() {
-        SearchModule module = new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, singletonList(new SearchPlugin() {
+        SearchModule module = new SearchModule(Settings.EMPTY, false, singletonList(new SearchPlugin() {
             @Override
             public Map<String, Suggester<?>> getSuggesters() {
                 return singletonMap("custom", CustomSuggester.INSTANCE);
@@ -140,7 +143,7 @@ public class SearchModuleTests extends ModuleTestCase {
 
     public void testRegisterHighlighter() {
         CustomHighlighter customHighlighter = new CustomHighlighter();
-        SearchModule module = new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, singletonList(new SearchPlugin() {
+        SearchModule module = new SearchModule(Settings.EMPTY, false, singletonList(new SearchPlugin() {
             @Override
             public Map<String, Highlighter> getHighlighters() {
                 return singletonMap("custom", customHighlighter);
@@ -155,7 +158,7 @@ public class SearchModuleTests extends ModuleTestCase {
     }
 
     public void testRegisteredQueries() throws IOException {
-        SearchModule module = new SearchModule(Settings.EMPTY, new NamedWriteableRegistry(), false, emptyList());
+        SearchModule module = new SearchModule(Settings.EMPTY, false, emptyList());
         List<String> allSupportedQueries = new ArrayList<>();
         Collections.addAll(allSupportedQueries, NON_DEPRECATED_QUERIES);
         Collections.addAll(allSupportedQueries, DEPRECATED_QUERIES);

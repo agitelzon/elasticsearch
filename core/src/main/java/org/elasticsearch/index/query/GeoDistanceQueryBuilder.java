@@ -50,12 +50,9 @@ import java.util.Optional;
 /**
  * Filter results of a query to include only those within a specific distance to some
  * geo point.
- * */
+ */
 public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQueryBuilder> {
-
-    /** Name of the query in the query dsl. */
     public static final String NAME = "geo_distance";
-    public static final ParseField QUERY_NAME_FIELD = new ParseField(NAME);
 
     /** Default for latitude normalization (as of this writing true).*/
     public static final boolean DEFAULT_NORMALIZE_LAT = true;
@@ -362,9 +359,12 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
                 fieldName = currentFieldName;
                 GeoUtils.parseGeoPoint(parser, point);
             } else if (token == XContentParser.Token.START_OBJECT) {
+                if (fieldName != null) {
+                    throw new ParsingException(parser.getTokenLocation(), "[geo_distance] query doesn't support multiple fields, found ["
+                            + fieldName + "] and [" + currentFieldName + "]");
+                }
                 // the json in the format of -> field : { lat : 30, lon : 12 }
                 String currentName = parser.currentName();
-                assert currentFieldName != null;
                 fieldName = currentFieldName;
                 while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                     if (token == XContentParser.Token.FIELD_NAME) {
